@@ -1,0 +1,72 @@
+{
+    "name": "C++ Development Container",
+    "image": "mcr.microsoft.com/devcontainers/cpp:1-ubuntu-22.04",
+    
+    // Características adicionales a instalar
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true,
+            "installOhMyZsh": true
+        }
+    },
+
+    // Configuración de VS Code
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "C_Cpp.default.cppStandard": "c++20",
+                "C_Cpp.default.cStandard": "c17",
+                "C_Cpp.default.compilerPath": "/usr/bin/g++",
+                "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+                "files.associations": {
+                    "*.hpp": "cpp",
+                    "*.h": "c"
+                }
+            },
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cmake-tools",
+                "twxs.cmake",
+                "ms-vscode.cpptools-themes",
+                "vadimcn.vscode-lldb",
+                "formulahendry.code-runner"
+            ]
+        }
+    },
+
+    // Sin postCreateCommand - las herramientas ya están en la imagen base
+    // "postCreateCommand": "",
+
+    // Puerto forwarding (si necesitas servidor web, etc.)
+    //"forwardPorts": [3000, 8080],
+
+    // Comando después de adjuntar al contenedor
+    "postAttachCommand": {
+        "info": "echo '✅ C++ Dev Container listo para usar!'"
+    },
+
+    // Configuración del usuario dentro del container
+    "remoteUser": "vscode",
+    
+    // Configuración adicional de contenedor
+    "containerUser": "vscode",
+    "updateRemoteUserUID": false,
+
+    // Variables de entorno
+    "containerEnv": {
+        "TZ": "Europe/Madrid"
+    },
+
+    // Montajes adicionales si necesitas acceso a directorios específicos
+    "mounts": [
+        // "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+
+    // Configuración de privilegios
+    "privileged": false,
+    "init": true
+}

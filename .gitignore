@@ -1,0 +1,49 @@
+# Ejecutables y archivos compilados
+*.exe
+*.out
+*.o
+*.obj
+*.so
+*.dll
+*.a
+
+# Directorios de build
+build/
+bin/
+output/
+
+# Archivos temporales
+*.tmp
+*.log
+*.swp
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE (mantener configuración del proyecto)
+.vscode/launch.json
+.vscode/tasks.json
+.vs/
+.idea/
+
+# Valgrind y debugging
+*.valgrind
+core
+*.core
+
+# Backup files
+*.bak
+*.backup
+
+# Personal notes
+personal_notes.txt
+TODO.md
+
+# Mantener archivos importantes del proyecto
+!.devcontainer/
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+!Makefile
+!README.md
