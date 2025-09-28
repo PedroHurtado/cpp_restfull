@@ -66,16 +66,16 @@
         "-g"
     ],
     
-    // Code Runner configurado para ejecutar desde la raíz del proyecto
+    // Code Runner con ruta completa y mejor manejo de errores
     "code-runner.executorMap": {
-        "cpp": "mkdir -p ${workspaceFolder}/build && g++ -std=c++20 -fconcepts -Wall -Wextra -g ${file} -o ${workspaceFolder}/build/${fileBasenameNoExtension} && ${workspaceFolder}/build/${fileBasenameNoExtension}"
+        "cpp": "cd \"$workspaceRoot\" && mkdir -p build && g++ -std=c++20 -fconcepts -Wall -Wextra -g \"$fullFileName\" -o build/main && echo '🚀 Ejecutando...' && ./build/main"
     },
     "code-runner.runInTerminal": true,
     "code-runner.saveFileBeforeRun": true,
     "code-runner.clearPreviousOutput": true,
     
     // Configurar el directorio de trabajo para Code Runner
-    "code-runner.cwd": "${workspaceFolder}",
+    "code-runner.cwd": "$workspaceRoot",
     "code-runner.fileDirectoryAsCwd": false,
     
     // IntelliSense más responsive
@@ -83,7 +83,7 @@
     "C_Cpp.autocomplete": "default",
     "C_Cpp.errorSquiggles": "enabled",
     
-    // Configuración del terminal para abrir en la raíz
+    // Configuración del terminal
     "terminal.integrated.cwd": "${workspaceFolder}",
     "terminal.integrated.defaultProfile.linux": "bash"
 }
