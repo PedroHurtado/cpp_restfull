@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <ranges>
+#include "crow.h"
 
 int main() {
     std::cout << "¡Hola desde el dev container de C++!" << std::endl;
@@ -19,6 +20,16 @@ int main() {
         std::cout << numero << " ";
     }
     std::cout << std::endl;
+    
+    // Crow web server - Hello World
+    crow::SimpleApp app;
+    
+    CROW_ROUTE(app, "/")([](){
+        return "Hello World!";
+    });
+    
+    std::cout << "Servidor web iniciando en puerto 8080..." << std::endl;
+    app.port(8080).multithreaded().run();
     
     return 0;
 }
