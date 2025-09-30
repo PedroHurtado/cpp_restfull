@@ -50,7 +50,35 @@
         "ranges": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "csignal": "c",
+        "cstring": "c",
+        "ctime": "c",
+        "any": "c",
+        "bitset": "c",
+        "chrono": "c",
+        "codecvt": "c",
+        "complex": "c",
+        "condition_variable": "c",
+        "coroutine": "c",
+        "list": "c",
+        "map": "c",
+        "set": "c",
+        "unordered_set": "c",
+        "ratio": "c",
+        "regex": "c",
+        "source_location": "c",
+        "fstream": "c",
+        "future": "c",
+        "iomanip": "c",
+        "mutex": "c",
+        "semaphore": "c",
+        "sstream": "c",
+        "stop_token": "c",
+        "thread": "c",
+        "cinttypes": "c",
+        "typeindex": "c",
+        "variant": "c"
     },
     
     // Configuración C++20 por defecto
@@ -81,7 +109,7 @@
     // IntelliSense más responsive
     "C_Cpp.intelliSenseEngine": "default",
     "C_Cpp.autocomplete": "default",
-    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.errorSquiggles": "disabled",
     
     // Configuración del terminal
     "terminal.integrated.cwd": "${workspaceFolder}",

@@ -1,34 +1,202 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <ranges>
 #include "crow.h"
+#include <string>
+#include <vector>
+#include <mutex>
+
+// Estructura para representar una Tarea
+struct Tarea {
+    int id;
+    std::string titulo;
+    std::string descripcion;
+    bool completada;
+
+    crow::json::wvalue toJson() const {
+        crow::json::wvalue json;
+        json["id"] = id;
+        json["titulo"] = titulo;
+        json["descripcion"] = descripcion;
+        json["completada"] = completada;
+        return json;
+    }
+};
+
+// Base de datos en memoria
+class TareasDB {
+private:
+    std::vector<Tarea> tareas;
+    int siguiente_id;
+    std::mutex mtx;
+
+public:
+    TareasDB() : siguiente_id(1) {
+        // Datos de ejemplo
+        tareas.push_back({siguiente_id++, "Aprender Crow", "Crear una API REST con C++", false});
+        tareas.push_back({siguiente_id++, "Hacer ejercicio", "Correr 5km", true});
+    }
+
+    Tarea crear(const std::string& titulo, const std::string& descripcion) {
+        std::lock_guard<std::mutex> lock(mtx);
+        Tarea nueva = {siguiente_id++, titulo, descripcion, false};
+        tareas.push_back(nueva);
+        return nueva;
+    }
+
+    std::vector<Tarea> obtenerTodas() {
+        std::lock_guard<std::mutex> lock(mtx);
+        return tareas;
+    }
+
+    std::pair<bool, Tarea> obtenerPorId(int id) {
+        std::lock_guard<std::mutex> lock(mtx);
+        for (const auto& tarea : tareas) {
+            if (tarea.id == id) {
+                return {true, tarea};
+            }
+        }
+        return {false, {}};
+    }
+
+    bool actualizar(int id, const std::string& titulo, const std::string& descripcion, bool completada) {
+        std::lock_guard<std::mutex> lock(mtx);
+        for (auto& tarea : tareas) {
+            if (tarea.id == id) {
+                tarea.titulo = titulo;
+                tarea.descripcion = descripcion;
+                tarea.completada = completada;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool eliminar(int id) {
+        std::lock_guard<std::mutex> lock(mtx);
+        for (auto it = tareas.begin(); it != tareas.end(); ++it) {
+            if (it->id == id) {
+                tareas.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 int main() {
-    std::cout << "¡Hola desde el dev container de C++!" << std::endl;
-    
-    // Ejemplo usando características de C++20
-    std::vector<int> numeros = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    
-    // Usar ranges (C++20)
-    auto pares = numeros 
-        | std::views::filter([](int n) { return n % 2 == 0; });
-    
-    std::cout << "Números pares: ";
-    for (int numero : pares) {
-        std::cout << numero << " ";
-    }
-    std::cout << std::endl;
-    
-    // Crow web server - Hello World
     crow::SimpleApp app;
-    
-    CROW_ROUTE(app, "/")([](){
-        return "Hello World!";
+    TareasDB db;
+
+    // GET /api/tareas - Obtener todas las tareas
+    CROW_ROUTE(app, "/api/tareas")
+    .methods("GET"_method)
+    ([&db]() {
+        auto tareas = db.obtenerTodas();
+        crow::json::wvalue respuesta;
+        respuesta["total"] = tareas.size();
+        
+        std::vector<crow::json::wvalue> json_tareas;
+        for (const auto& tarea : tareas) {
+            json_tareas.push_back(tarea.toJson());
+        }
+        respuesta["tareas"] = std::move(json_tareas);
+        
+        return crow::response(200, respuesta);
     });
+
+    // GET /api/tareas/:id - Obtener una tarea por ID
+    CROW_ROUTE(app, "/api/tareas/<int>")
+    .methods("GET"_method)
+    ([&db](int id) {
+        auto [encontrada, tarea] = db.obtenerPorId(id);
+        
+        if (!encontrada) {
+            crow::json::wvalue error;
+            error["error"] = "Tarea no encontrada";
+            return crow::response(404, error);
+        }
+        
+        return crow::response(200, tarea.toJson());
+    });
+
+    // POST /api/tareas - Crear una nueva tarea
+    CROW_ROUTE(app, "/api/tareas")
+    .methods("POST"_method)
+    ([&db](const crow::request& req) {
+        auto json = crow::json::load(req.body);
+        
+        if (!json) {
+            crow::json::wvalue error;
+            error["error"] = "JSON inválido";
+            return crow::response(400, error);
+        }
+        
+        if (!json.has("titulo")) {
+            crow::json::wvalue error;
+            error["error"] = "El campo 'titulo' es requerido";
+            return crow::response(400, error);
+        }
+        
+        std::string titulo = json["titulo"].s();
+        std::string descripcion = json.has("descripcion") ? std::string(json["descripcion"].s()) : std::string("");
+        
+        Tarea nueva = db.crear(titulo, descripcion);
+        
+        crow::json::wvalue respuesta;
+        respuesta["mensaje"] = "Tarea creada exitosamente";
+        respuesta["tarea"] = nueva.toJson();
+        
+        return crow::response(201, respuesta);
+    });
+
+    // PUT /api/tareas/:id - Actualizar una tarea
+    CROW_ROUTE(app, "/api/tareas/<int>")
+    .methods("PUT"_method)
+    ([&db](const crow::request& req, int id) {
+        auto json = crow::json::load(req.body);
+        
+        if (!json) {
+            crow::json::wvalue error;
+            error["error"] = "JSON inválido";
+            return crow::response(400, error);
+        }
+        
+        if (!json.has("titulo") || !json.has("descripcion") || !json.has("completada")) {
+            crow::json::wvalue error;
+            error["error"] = "Faltan campos requeridos: titulo, descripcion, completada";
+            return crow::response(400, error);
+        }
+        
+        std::string titulo = json["titulo"].s();
+        std::string descripcion = json["descripcion"].s();
+        bool completada = json["completada"].b();
+        
+        bool actualizada = db.actualizar(id, titulo, descripcion, completada);
+        
+        if (!actualizada) {
+            crow::json::wvalue error;
+            error["error"] = "Tarea no encontrada";
+            return crow::response(404, error);
+        }
+        
+        return crow::response(204);
+    });
+
+    // DELETE /api/tareas/:id - Eliminar una tarea
+    CROW_ROUTE(app, "/api/tareas/<int>")
+    .methods("DELETE"_method)
+    ([&db](int id) {
+        bool eliminada = db.eliminar(id);
+        
+        if (!eliminada) {
+            crow::json::wvalue error;
+            error["error"] = "Tarea no encontrada";
+            return crow::response(404, error);
+        }
+        
+        return crow::response(204);
+    });
+
+    std::cout << "API REST corriendo en http://localhost:8080\n";
     
-    std::cout << "Servidor web iniciando en puerto 8080..." << std::endl;
     app.port(8080).multithreaded().run();
     
     return 0;

@@ -1,0 +1,97 @@
+/*#include "field_validator.hpp"
+#include "field_registry.hpp"
+#include "field_functions.hpp"*/
+
+#include "base_model.hpp"
+
+#include <iostream>
+
+class UserModel : public BaseModel<UserModel>
+{
+public:
+    Field<std::string> username = CreateField<std::string>("username", true, 3, 20);
+    Field<std::string> email{"email", true};
+    Field<int> age = CreateField<int>("age", true, 18, 120);
+
+    // Macro mínima - solo lista los campos
+    REGISTER_FIELDS(username, email, age)
+};
+
+int main1()
+{
+    // Test FieldValidator
+    /*FieldOptions<std::string> opts;
+    opts.required = true;
+    opts.min_length = 3;
+    opts.max_length = 20;
+
+    FieldValidator<std::string> validator("username", opts);
+
+    auto [valid1, error1] = validator.validate("john");
+    std::cout << "Valid: " << valid1 << ", Error: " << error1 << std::endl;
+
+    auto [valid2, error2] = validator.validate("jo");
+    std::cout << "Valid: " << valid2 << ", Error: " << error2 << std::endl;
+
+    // Test FieldRegistry
+    auto& registry = FieldRegistry::instance();
+    std::cout << "Registry has " << registry.field_count(typeid(int)) << " fields" << std::endl;*/
+
+    /*std::string name = Field<std::string>("name", true, 3, 20);
+    int age = Field<int>("age", true, 18, 120);
+
+    std::cout << "name: " << name << std::endl;
+    std::cout << "age: " << age << std::endl;*/
+
+     std::cout << "=== Test con Macro Mínima ===" << std::endl << std::endl;
+    
+    // Crear modelo
+    std::cout << "Creando UserModel..." << std::endl;
+    UserModel user;
+    std::cout << "✓ Creado" << std::endl << std::endl;
+    
+    // Campos registrados
+    std::cout << "Campos: " << user.get_fields().size() << std::endl << std::endl;
+    
+    // Asignar valores
+    user.username = "john_doe";
+    user.email = "john@example.com";
+    user.age = 25;
+    
+    int a = user.age;
+
+    std::cout << "Valores:" << std::endl;
+    std::cout << "  username: " << user.username << std::endl;
+    std::cout << "  email: " << user.email << std::endl;
+    std::cout << "  age: " << user.age << std::endl << std::endl;
+    
+    // Validar - correcto
+    std::cout << "Validación (correcto):" << std::endl;
+    auto [v1, e1] = user.validate();
+    std::cout << "  Válido: " << (v1 ? "Sí" : "No") << std::endl << std::endl;
+    
+    // Validar - username corto
+    std::cout << "Validación (username corto):" << std::endl;
+    user.username = "jo";
+    auto [v2, e2] = user.validate();
+    std::cout << "  Válido: " << (v2 ? "Sí" : "No") << std::endl;
+    for (const auto& err : e2) {
+        std::cout << "  - " << err << std::endl;
+    }
+    std::cout << std::endl;
+    
+    // Validar - edad baja
+    std::cout << "Validación (edad < 18):" << std::endl;
+    user.username = "alice";
+    user.age = 15;
+    auto [v3, e3] = user.validate();
+    std::cout << "  Válido: " << (v3 ? "Sí" : "No") << std::endl;
+    for (const auto& err : e3) {
+        std::cout << "  - " << err << std::endl;
+    }
+    
+    std::cout << std::endl << "=== Test completado ===" << std::endl;
+    
+    return 0;
+    
+}

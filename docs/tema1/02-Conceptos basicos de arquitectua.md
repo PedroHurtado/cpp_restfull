@@ -181,9 +181,30 @@ Cliente ──► Load Balancer ──┬──► Servidor 1
 ### 2. API Gateway
 
 ```
-Clientes ──► API Gateway ──┬──► Microservicio A
-                           ├──► Microservicio B
-                           └──► Microservicio C
+                    ┌─────────────────┐
+                    │    Clientes     │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  API Gateway    │
+                    │  (Kong/Traefik) │
+                    └────────┬────────┘
+                             │
+              ┏━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━┓
+              ▼                              ▼
+    ┌─────────────────┐            ┌─────────────────┐
+    │ Service Registry│            │  Load Balancer  │
+    │   (Consul/Etcd) │◄───────────┤   (Integrado)   │
+    └─────────────────┘            └─────────────────┘
+              │                              │
+              │ Descubrimiento               │ Balanceo
+              │                              │
+    ┌─────────┴──────────┐         ┌────────┴─────────┐
+    ▼                    ▼         ▼                  ▼
+┌───────┐            ┌───────┐  ┌───────┐        ┌───────┐
+│ Svc A │            │ Svc A │  │ Svc B │        │ Svc B │
+│ Inst1 │            │ Inst2 │  │ Inst1 │        │ Inst2 │
+└───────┘            └───────┘  └───────┘        └───────┘
 ```
 
 **Funcionalidades:**
