@@ -114,8 +114,8 @@ int main() {
     });
 
     APP_ROUTE(app, "/test")
-    //.allow_anonymous()
-    ([]() {
+    .allow_anonymous()    
+    ([]() {        
         throw std::runtime_error("Boom!");
         return "Never reached";
     });
