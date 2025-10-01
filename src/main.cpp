@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include "custom_route.hpp"
 
 // Estructura para representar una Tarea
 struct Tarea {
@@ -82,8 +83,43 @@ public:
 };
 
 int main() {
-    crow::SimpleApp app;
+    crow::App<AuthenticationMiddleware> app;;    
     TareasDB db;
+
+     // Esta es TODA la solución que necesitas
+    app.exception_handler([](crow::response& res) {
+        try {
+            throw;  // Re-lanza la excepción actual
+        }
+        catch (const std::exception& e) {
+            CROW_LOG_ERROR << "Exception: " << e.what();
+            res.code = 500;
+            res.set_header("Content-Type", "application/json");
+            res.write(crow::json::wvalue{
+                {"error", "Internal Server Error"},
+                {"message", e.what()}
+            }.dump());
+            res.end();
+        }
+        catch (...) {
+            CROW_LOG_ERROR << "Unknown exception";
+            res.code = 500;
+            res.set_header("Content-Type", "application/json");
+            res.write(crow::json::wvalue{
+                {"error", "Internal Server Error"},
+                {"message", "Unknown error occurred"}
+            }.dump());
+            res.end();
+        }
+    });
+
+    APP_ROUTE(app, "/test")
+    //.allow_anonymous()
+    ([]() {
+        throw std::runtime_error("Boom!");
+        return "Never reached";
+    });
+
 
     // GET /api/tareas - Obtener todas las tareas
     CROW_ROUTE(app, "/api/tareas")
@@ -183,6 +219,7 @@ int main() {
     // DELETE /api/tareas/:id - Eliminar una tarea
     CROW_ROUTE(app, "/api/tareas/<int>")
     .methods("DELETE"_method)
+    
     ([&db](int id) {
         bool eliminada = db.eliminar(id);
         
