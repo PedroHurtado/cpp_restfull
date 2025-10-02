@@ -1,0 +1,40 @@
+#include "crow.h"
+#include <string>
+
+int main()
+{
+    crow::SimpleApp app;
+
+    // Habilitar HTTP/2
+    app.ssl_file("server.crt", "server.key");
+       //.http2();
+
+    // Ruta simple
+    CROW_ROUTE(app, "/")([](){
+        return "¡Hola desde Crow con HTTP/2!";
+    });
+
+    // Ruta con JSON
+    CROW_ROUTE(app, "/api/data")([](const crow::request& req){
+        crow::json::wvalue response;
+        response["mensaje"] = "Datos desde HTTP/2";
+        response["version"] = "2.0";
+        response["estado"] = "ok";
+        return response;
+    });
+
+    // Ruta con parámetros
+    CROW_ROUTE(app, "/usuario/<string>")([](std::string nombre){
+        crow::json::wvalue response;
+        response["usuario"] = nombre;
+        response["protocolo"] = "HTTP/2";
+        return response;
+    });
+
+    // Iniciar servidor en puerto 443 (HTTPS)
+    app.port(443)
+       .multithreaded()
+       .run();
+
+    return 0;
+}
