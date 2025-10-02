@@ -16,6 +16,116 @@ private:
         static AnonymousRouteRegistry registry;
         return registry;
     }
+    static bool match_route_pattern(const std::string &pattern, const std::string &path)
+    {
+        size_t pattern_pos = 0;
+        size_t path_pos = 0;
+
+        while (pattern_pos < pattern.length() && path_pos < path.length())
+        {
+            // Si encontramos un parámetro en el patrón
+            if (pattern[pattern_pos] == '<')
+            {
+                // Buscar el cierre del parámetro
+                size_t close_pos = pattern.find('>', pattern_pos);
+                if (close_pos == std::string::npos)
+                {
+                    return false; // Patrón malformado
+                }
+
+                // Extraer el tipo de parámetro (int, string, etc.)
+                std::string param_type = pattern.substr(pattern_pos + 1, close_pos - pattern_pos - 1);
+
+                // Avanzar en el patrón hasta después del '>'
+                pattern_pos = close_pos + 1;
+
+                // Buscar el siguiente '/' en el path o el final
+                size_t next_slash = path.find('/', path_pos);
+                if (next_slash == std::string::npos)
+                {
+                    next_slash = path.length();
+                }
+
+                // Extraer el valor del parámetro
+                std::string param_value = path.substr(path_pos, next_slash - path_pos);
+
+                // Validar que el valor coincida con el tipo esperado
+                if (!validate_param_type(param_type, param_value))
+                {
+                    return false;
+                }
+
+                // Avanzar en el path
+                path_pos = next_slash;
+            }
+            else
+            {
+                // Comparación carácter por carácter
+                if (pattern[pattern_pos] != path[path_pos])
+                {
+                    return false;
+                }
+                pattern_pos++;
+                path_pos++;
+            }
+        }
+
+        // Ambos deben haber llegado al final
+        return pattern_pos == pattern.length() && path_pos == path.length();
+    }
+
+    static bool validate_param_type(const std::string &type, const std::string &value)
+    {
+        if (value.empty())
+        {
+            return false;
+        }
+
+        if (type == "int" || type == "uint")
+        {
+            // Validar que sea un número entero
+            if (type == "uint" && value[0] == '-')
+            {
+                return false; // uint no puede ser negativo
+            }
+
+            size_t start = (value[0] == '-' || value[0] == '+') ? 1 : 0;
+            for (size_t i = start; i < value.length(); ++i)
+            {
+                if (!std::isdigit(value[i]))
+                {
+                    return false;
+                }
+            }
+            return value.length() > start; // Debe tener al menos un dígito
+        }
+        else if (type == "double" || type == "float")
+        {
+            // Validar que sea un número decimal
+            try
+            {
+                std::stod(value);
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
+        else if (type == "string")
+        {
+            // string acepta cualquier cosa que no sea '/'
+            return value.find('/') == std::string::npos;
+        }
+        else if (type == "path")
+        {
+            // path acepta todo, incluyendo '/'
+            return true;
+        }
+
+        // Tipo desconocido, aceptar por defecto
+        return true;
+    }
 
 public:
     static void register_anonymous(const std::string &route)
@@ -23,9 +133,24 @@ public:
         instance().anonymous_routes_.insert(route);
     }
 
-    static bool is_anonymous(const std::string &route)
+    static bool is_anonymous(const std::string &request_path)
     {
-        return instance().anonymous_routes_.find(route) != instance().anonymous_routes_.end();
+        // Primero intenta match exacto (para rutas sin parámetros)
+        if (instance().anonymous_routes_.find(request_path) != instance().anonymous_routes_.end())
+        {
+            return true;
+        }
+
+        // Si no hay match exacto, intenta pattern matching
+        for (const auto &pattern : instance().anonymous_routes_)
+        {
+            if (match_route_pattern(pattern, request_path))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     static void clear()

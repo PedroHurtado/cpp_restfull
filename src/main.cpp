@@ -113,9 +113,11 @@ int main() {
         }
     });
 
-    APP_ROUTE(app, "/test")
+    APP_ROUTE(app, "/test/<int>")
     .allow_anonymous()    
-    ([]() {        
+    .methods("POST"_method)
+    ([](int a) { 
+        std::cout << a << std::endl;
         throw std::runtime_error("Boom!");
         return "Never reached";
     });

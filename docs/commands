@@ -1,0 +1,3 @@
+sudo apt-get install libssl-dev libnghttp2-dev
+openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes
+g++ -std=c++20 main.cpp -o server -I./include -DCROW_ENABLE_SSL -DCROW_ENABLE_HTTP2 -lssl -lcrypto -lnghttp2 -lpthread -O3

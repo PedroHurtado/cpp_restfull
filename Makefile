@@ -1,21 +1,95 @@
 # Makefile para proyectos C++ con Crow
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -g -O0 -DCROW_MAIN
+
+# Flags para DESARROLLO
+CXXFLAGS_DEV = -std=c++20 -Wall -Wextra -g -O0 -DCROW_MAIN
+# Flags para PRODUCCIÓN
+CXXFLAGS_PROD = -std=c++20 -O3 -march=native -DNDEBUG -DCROW_MAIN
+# Flags de enlace
 LDFLAGS = -lpthread
+# Flags de enlace estático para producción
+LDFLAGS_STATIC = -lpthread -static-libgcc -static-libstdc++
 
 # Directorios
 SRCDIR = src
 INCDIR = include
 BUILDDIR = build
+BUILDDIR_PROD = build/production
 BINDIR = build
 
 # Archivos fuente
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
+OBJECTS_PROD = $(SOURCES:$(SRCDIR)/%.cpp=$(BUILDDIR_PROD)/%.o)
 TARGET = $(BINDIR)/main
+TARGET_PROD = $(BINDIR)/api
 
-# Regla principal
+# Regla principal (desarrollo)
 all: crow-check $(TARGET)
+
+# ============================================
+# TARGETS DE PRODUCCIÓN
+# ============================================
+
+# Compilar para producción (target principal)
+production: crow-check $(TARGET_PROD)
+	@echo ""
+	@echo "✅ Binario de producción generado!"
+	@echo "📊 Información del binario:"
+	@ls -lh $(TARGET_PROD)
+	@file $(TARGET_PROD)
+	@echo ""
+	@echo "🔍 Dependencias dinámicas:"
+	@ldd $(TARGET_PROD) 2>/dev/null || echo "Binario estático (sin dependencias dinámicas)"
+	@echo ""
+	@echo "🚀 Listo para desplegar: $(TARGET_PROD)"
+
+# Compilar y hacer strip del binario
+production-strip: production
+	@echo "✂️  Eliminando símbolos de debug..."
+	strip $(TARGET_PROD)
+	@echo "✅ Strip completado!"
+	@echo "📊 Tamaño final:"
+	@ls -lh $(TARGET_PROD)
+
+# Crear ejecutable de producción
+$(TARGET_PROD): $(OBJECTS_PROD) | build-dirs-prod
+	@echo "🔗 Enlazando ejecutable de producción..."
+	$(CXX) $(OBJECTS_PROD) -o $@ $(LDFLAGS_STATIC)
+	@echo "✅ Compilación de producción completada"
+
+# Compilar archivos objeto para producción
+$(BUILDDIR_PROD)/%.o: $(SRCDIR)/%.cpp | build-dirs-prod
+	@echo "🔨 Compilando para producción: $<..."
+	$(CXX) $(CXXFLAGS_PROD) -I$(INCDIR) -c $< -o $@
+
+# Crear directorios de producción
+build-dirs-prod:
+	@mkdir -p $(BUILDDIR_PROD)
+
+# Análisis del binario de producción
+analyze-production: $(TARGET_PROD)
+	@echo "📊 Análisis del binario de producción:"
+	@echo ""
+	@echo "📁 Tamaño del archivo:"
+	@ls -lh $(TARGET_PROD)
+	@du -h $(TARGET_PROD)
+	@echo ""
+	@echo "🔍 Tipo de archivo:"
+	@file $(TARGET_PROD)
+	@echo ""
+	@echo "📚 Dependencias dinámicas:"
+	@ldd $(TARGET_PROD) 2>/dev/null || echo "Binario estático"
+	@echo ""
+	@echo "🔧 Información del binario:"
+	@readelf -h $(TARGET_PROD) 2>/dev/null | grep -E "(Class|Machine|Type)" || true
+	@echo ""
+	@echo "📦 Secciones del binario:"
+	@size $(TARGET_PROD)
+
+# ============================================
+# TARGETS ORIGINALES (DESARROLLO)
+# ============================================
 
 # Verificar que Crow esté disponible e instalarlo si es necesario
 crow-check:
@@ -34,31 +108,25 @@ install-dependencies:
 	@if command -v apt-get >/dev/null 2>&1; then \
 		echo "🔧 Detectado sistema basado en Debian/Ubuntu"; \
 		sudo apt-get update; \
-		sudo apt-get install -y build-essential cmake git libboost-all-dev libasio-dev curl wget; \
+		sudo apt-get install -y build-essential cmake git libboost-all-dev libasio-dev curl wget binutils; \
 	elif command -v yum >/dev/null 2>&1; then \
 		echo "🔧 Detectado sistema basado en RedHat/CentOS"; \
 		sudo yum groupinstall -y "Development Tools"; \
-		sudo yum install -y cmake git boost-devel asio-devel curl wget; \
+		sudo yum install -y cmake git boost-devel asio-devel curl wget binutils; \
 	elif command -v dnf >/dev/null 2>&1; then \
 		echo "🔧 Detectado sistema Fedora"; \
 		sudo dnf groupinstall -y "Development Tools"; \
-		sudo dnf install -y cmake git boost-devel asio-devel curl wget; \
+		sudo dnf install -y cmake git boost-devel asio-devel curl wget binutils; \
 	elif command -v pacman >/dev/null 2>&1; then \
 		echo "🔧 Detectado sistema Arch Linux"; \
-		sudo pacman -S --noconfirm base-devel cmake git boost asio curl wget; \
+		sudo pacman -S --noconfirm base-devel cmake git boost asio curl wget binutils; \
 	else \
-		echo "❌ Sistema no soportado automáticamente. Instala manualmente:"; \
-		echo "   - build-essential o equivalent"; \
-		echo "   - cmake (>= 3.10)"; \
-		echo "   - git"; \
-		echo "   - libboost-dev (>= 1.64)"; \
-		echo "   - libasio-dev"; \
-		echo "   - curl, wget"; \
+		echo "❌ Sistema no soportado automáticamente."; \
 		exit 1; \
 	fi
 	@echo "✅ Dependencias instaladas correctamente"
 
-# Instalar Crow simple (header-only) - MÉTODO PRINCIPAL
+# Instalar Crow simple (header-only)
 install-crow-simple:
 	@echo "📦 Instalando Crow (versión header-only)..."
 	@temp_dir=$$(mktemp -d); \
@@ -85,63 +153,18 @@ install-crow-simple:
 	cd /; \
 	rm -rf "$$temp_dir"
 
-# Instalar Crow compilado (método alternativo si el simple falla)
-install-crow:
-	@echo "📦 Instalando Crow compilado..."
-	@temp_dir=$$(mktemp -d); \
-	echo "📁 Directorio temporal: $$temp_dir"; \
-	cd "$$temp_dir"; \
-	echo "📥 Clonando repositorio de Crow..."; \
-	rm -rf Crow; \
-	git clone --depth 1 --branch v1.2.0 https://github.com/CrowCpp/Crow.git; \
-	cd Crow; \
-	echo "🔧 Configurando build con CMake..."; \
-	mkdir -p build; \
-	cd build; \
-	if cmake .. \
-		-DCROW_BUILD_EXAMPLES=OFF \
-		-DCROW_BUILD_TESTS=OFF \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-		-DCROW_ENABLE_SSL=OFF \
-		-DCROW_ENABLE_COMPRESSION=OFF; then \
-		echo "✅ Configuración de CMake exitosa"; \
-		echo "🔨 Compilando Crow..."; \
-		if make -j$$(nproc) 2>/dev/null || make -j1; then \
-			echo "✅ Compilación exitosa"; \
-			echo "📦 Instalando en el sistema..."; \
-			if sudo make install; then \
-				sudo ldconfig 2>/dev/null || true; \
-				echo "✅ Crow instalado correctamente en el sistema"; \
-			else \
-				echo "❌ Error en la instalación de Crow"; \
-				exit 1; \
-			fi; \
-		else \
-			echo "❌ Error en la compilación de Crow"; \
-			echo "🔄 Intentando instalación header-only como alternativa..."; \
-			$(MAKE) install-crow-simple; \
-		fi; \
-	else \
-		echo "❌ Error en la configuración de CMake para Crow"; \
-		echo "🔄 Intentando instalación header-only como alternativa..."; \
-		$(MAKE) install-crow-simple; \
-	fi; \
-	cd /; \
-	rm -rf "$$temp_dir"
-
-# Crear el ejecutable
+# Crear el ejecutable de desarrollo
 $(TARGET): $(OBJECTS) | build-dirs
-	@echo "🔗 Enlazando ejecutable..."
+	@echo "🔗 Enlazando ejecutable de desarrollo..."
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
-	@echo "✅ Compilación completada: $(TARGET)"
+	@echo "✅ Compilación de desarrollo completada: $(TARGET)"
 
-# Compilar archivos objeto
+# Compilar archivos objeto de desarrollo
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp | build-dirs
-	@echo "🔨 Compilando $<..."
-	$(CXX) $(CXXFLAGS) -I$(INCDIR) -c $< -o $@
+	@echo "🔨 Compilando para desarrollo: $<..."
+	$(CXX) $(CXXFLAGS_DEV) -I$(INCDIR) -c $< -o $@
 
-# Crear directorios si no existen - target único
+# Crear directorios si no existen
 build-dirs:
 	@mkdir -p $(BUILDDIR)
 
@@ -151,27 +174,25 @@ clean:
 	rm -rf $(BUILDDIR)
 	@echo "✅ Limpieza completada"
 
-# Limpiar completamente (incluyendo Crow instalado)
-clean-all: clean
-	@echo "🧹 Limpieza completa del sistema..."
-	@echo "⚠️  Esto removerá Crow del sistema. ¿Continuar? [y/N]"
-	@read -p "" confirm; \
-	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
-		sudo rm -f /usr/local/include/crow.h /usr/local/include/crow/* 2>/dev/null || true; \
-		sudo rm -f /usr/local/lib/libcrow* 2>/dev/null || true; \
-		sudo rm -f /usr/local/lib/pkgconfig/crow.pc 2>/dev/null || true; \
-		sudo ldconfig 2>/dev/null || true; \
-		echo "✅ Limpieza completa realizada"; \
-	else \
-		echo "❌ Limpieza completa cancelada"; \
-	fi
+# Limpiar solo producción
+clean-production:
+	@echo "🧹 Limpiando archivos de producción..."
+	rm -rf $(BUILDDIR_PROD) $(TARGET_PROD)
+	@echo "✅ Limpieza de producción completada"
 
-# Ejecutar el programa
+# Ejecutar el programa de desarrollo
 run: $(TARGET)
-	@echo "🚀 Ejecutando servidor..."
+	@echo "🚀 Ejecutando servidor de desarrollo..."
 	@echo "📡 Disponible en: http://localhost:8080"
 	@echo "⏹️  Presiona Ctrl+C para detener"
 	./$(TARGET)
+
+# Ejecutar el programa de producción localmente
+run-production: $(TARGET_PROD)
+	@echo "🚀 Ejecutando servidor de producción..."
+	@echo "📡 Disponible en: http://localhost:8080"
+	@echo "⏹️  Presiona Ctrl+C para detener"
+	./$(TARGET_PROD)
 
 # Ejecutar en segundo plano
 run-bg: $(TARGET)
@@ -184,6 +205,7 @@ run-bg: $(TARGET)
 stop:
 	@echo "⏹️  Deteniendo servidor..."
 	-pkill -f "./$(TARGET)" 2>/dev/null || true
+	-pkill -f "./$(TARGET_PROD)" 2>/dev/null || true
 	@echo "✅ Servidor detenido"
 
 # Test rápido del servidor
@@ -208,98 +230,68 @@ check-system:
 	@echo "🔍 Verificando estado del sistema..."
 	@echo "📋 Compilador:"
 	@$(CXX) --version | head -1 || echo "❌ g++ no encontrado"
-	@echo "📋 CMake:"
-	@cmake --version | head -1 || echo "❌ cmake no encontrado"
-	@echo "📋 Boost:"
-	@if pkg-config --exists boost 2>/dev/null; then \
-		echo "✅ Boost encontrado (pkg-config): $$(pkg-config --modversion boost)"; \
-	elif [ -f /usr/include/boost/version.hpp ] || [ -f /usr/local/include/boost/version.hpp ]; then \
-		if [ -f /usr/include/boost/version.hpp ]; then \
-			boost_version=$$(grep -E '#define BOOST_VERSION [0-9]+' /usr/include/boost/version.hpp | head -1 | awk '{print $$3}' 2>/dev/null || echo "0"); \
-		else \
-			boost_version=$$(grep -E '#define BOOST_VERSION [0-9]+' /usr/local/include/boost/version.hpp | head -1 | awk '{print $$3}' 2>/dev/null || echo "0"); \
-		fi; \
-		if [ "$$boost_version" != "0" ] && [ "$$boost_version" -gt 0 ] 2>/dev/null; then \
-			major=$$((boost_version / 100000)); \
-			minor=$$((boost_version / 100 % 1000)); \
-			patch=$$((boost_version % 100)); \
-			echo "✅ Boost encontrado (headers): $$major.$$minor.$$patch"; \
-			if [ $$boost_version -ge 106400 ]; then \
-				echo "✅ Versión de Boost suficiente (>= 1.64)"; \
-			else \
-				echo "❌ Versión de Boost insuficiente (< 1.64)"; \
-			fi; \
-		else \
-			echo "✅ Boost encontrado (headers disponibles - versión no detectada)"; \
-		fi; \
-	elif dpkg -l 2>/dev/null | grep -q libboost-dev; then \
-		boost_pkg_version=$$(dpkg -l 2>/dev/null | grep libboost-dev | awk '{print $$3}' | head -1); \
-		echo "✅ Boost encontrado (dpkg): $$boost_pkg_version"; \
-	else \
-		echo "❌ Boost no encontrado"; \
-		echo "💡 Ejecuta: make install-dependencies"; \
-	fi
-	@echo "📋 ASIO:"
-	@if [ -f /usr/include/asio.hpp ] || [ -f /usr/local/include/asio.hpp ]; then \
-		echo "✅ ASIO encontrado (headers disponibles)"; \
-	elif dpkg -l | grep -q libasio-dev 2>/dev/null; then \
-		echo "✅ ASIO encontrado (dpkg)"; \
-	else \
-		echo "❌ ASIO no encontrado"; \
-		echo "💡 Ejecuta: make install-dependencies"; \
-	fi
+	@echo "📋 Herramientas de binarios:"
+	@strip --version | head -1 2>/dev/null || echo "⚠️  strip no encontrado"
 	@echo "📋 Crow:"
-	@if pkg-config --exists crow 2>/dev/null; then \
-		echo "✅ Crow encontrado (pkg-config): $$(pkg-config --modversion crow)"; \
-	elif [ -f /usr/local/include/crow.h ] || [ -f /usr/include/crow.h ]; then \
-		echo "✅ Crow encontrado (headers disponibles)"; \
+	@if [ -f /usr/local/include/crow.h ] || [ -f /usr/include/crow.h ]; then \
+		echo "✅ Crow encontrado"; \
 	else \
 		echo "❌ Crow no encontrado"; \
-		echo "💡 Ejecuta: make install-crow-simple"; \
 	fi
-
-# Reinstalar Crow completamente
-reinstall-crow: clean-all install-dependencies install-crow-simple
-	@echo "✅ Crow reinstalado completamente"
 
 # Mostrar información del proyecto
 info:
 	@echo "📋 Información del proyecto:"
+	@echo ""
+	@echo "🔧 DESARROLLO:"
 	@echo "   Compilador: $(CXX)"
 	@echo "   Estándar: C++20"
-	@echo "   Flags: $(CXXFLAGS)"
-	@echo "   Librerías: $(LDFLAGS)"
-	@echo "   Archivos fuente: $(SOURCES)"
+	@echo "   Flags: $(CXXFLAGS_DEV)"
 	@echo "   Ejecutable: $(TARGET)"
+	@echo ""
+	@echo "🚀 PRODUCCIÓN:"
+	@echo "   Compilador: $(CXX)"
+	@echo "   Estándar: C++20"
+	@echo "   Flags: $(CXXFLAGS_PROD)"
+	@echo "   Enlace: $(LDFLAGS_STATIC)"
+	@echo "   Ejecutable: $(TARGET_PROD)"
+	@echo ""
+	@echo "📁 Archivos fuente: $(SOURCES)"
 
 # Mostrar ayuda
 help:
 	@echo "🔧 Comandos disponibles:"
 	@echo ""
-	@echo "🏗️  Construcción:"
-	@echo "  make                    - Compilar el proyecto"
+	@echo "🏗️  Construcción (Desarrollo):"
+	@echo "  make                    - Compilar para desarrollo (con debug)"
+	@echo "  make run                - Compilar y ejecutar en modo desarrollo"
+	@echo "  make debug              - Ejecutar con gdb"
+	@echo "  make valgrind           - Verificar memoria"
+	@echo ""
+	@echo "🚀 Construcción (Producción):"
+	@echo "  make production         - Compilar binario optimizado para producción"
+	@echo "  make production-strip   - Compilar y hacer strip del binario"
+	@echo "  make run-production     - Ejecutar binario de producción localmente"
+	@echo "  make analyze-production - Analizar el binario de producción"
+	@echo ""
+	@echo "📦 Instalación:"
 	@echo "  make install-dependencies - Instalar dependencias del sistema"
-	@echo "  make install-crow-simple - Instalar Crow header-only (recomendado)"
-	@echo "  make install-crow       - Instalar Crow compilado (alternativo)"
-	@echo "  make reinstall-crow     - Reinstalar Crow completamente"
-	@echo ""
-	@echo "🚀 Ejecución:"
-	@echo "  make run               - Compilar y ejecutar servidor"
-	@echo "  make run-bg            - Ejecutar servidor en segundo plano"
-	@echo "  make stop              - Detener servidor en segundo plano"
-	@echo "  make test              - Probar que el servidor funciona"
-	@echo ""
-	@echo "🔍 Debug y análisis:"
-	@echo "  make debug             - Ejecutar con gdb"
-	@echo "  make valgrind          - Verificar memoria con valgrind"
-	@echo "  make check-system      - Verificar dependencias del sistema"
+	@echo "  make install-crow-simple  - Instalar Crow header-only"
 	@echo ""
 	@echo "🧹 Limpieza:"
-	@echo "  make clean             - Limpiar archivos generados"
-	@echo "  make clean-all         - Limpieza completa (incluye Crow)"
+	@echo "  make clean              - Limpiar archivos de desarrollo"
+	@echo "  make clean-production   - Limpiar archivos de producción"
 	@echo ""
-	@echo "ℹ️  Información:"
-	@echo "  make info              - Mostrar información del proyecto"
-	@echo "  make help              - Mostrar esta ayuda"
+	@echo "🔍 Información:"
+	@echo "  make check-system       - Verificar dependencias"
+	@echo "  make info               - Mostrar configuración del proyecto"
+	@echo "  make help               - Mostrar esta ayuda"
+	@echo ""
+	@echo "💡 Flujo recomendado para producción:"
+	@echo "   1. make production-strip    # Compilar y optimizar"
+	@echo "   2. make analyze-production  # Verificar el binario"
+	@echo "   3. Copiar build/api al contenedor Docker"
 
-.PHONY: all clean clean-all run run-bg stop test debug valgrind help info crow-check install-dependencies install-crow install-crow-simple reinstall-crow check-system build-dirs
+.PHONY: all production production-strip analyze-production clean clean-production \
+        run run-production run-bg stop test debug valgrind help info crow-check \
+        install-dependencies install-crow-simple check-system build-dirs build-dirs-prod
