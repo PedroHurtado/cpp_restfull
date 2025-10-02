@@ -1,0 +1,239 @@
+monorepo/
+├── .git/
+├── .gitignore
+├── README.md
+├── Makefile                                    # Makefile raíz para orquestar todos los servicios
+├── docker-compose.yml                          # Orquestación de TODOS los servicios (solo host)
+│
+├── services/                                   # Todos los microservicios
+│   │
+│   ├── auth-service/                          # Servicio de autenticación
+│   │   ├── .devcontainer/                     # DevContainer INDEPENDIENTE
+│   │   │   ├── devcontainer.json
+│   │   │   └── Dockerfile                     # Imagen de desarrollo
+│   │   ├── src/
+│   │   │   ├── main.cpp
+│   │   │   └── ...
+│   │   ├── include/
+│   │   ├── tests/
+│   │   ├── build/                             # Generado (en .gitignore)
+│   │   ├── dist/                              # Imágenes exportadas (en .gitignore)
+│   │   ├── Dockerfile                         # Imagen de PRODUCCIÓN
+│   │   ├── Makefile                           # Comandos del servicio
+│   │   ├── .dockerignore
+│   │   └── README.md
+│   │
+│   ├── user-service/                          # Servicio de usuarios
+│   │   ├── .devcontainer/
+│   │   │   ├── devcontainer.json
+│   │   │   └── Dockerfile
+│   │   ├── src/
+│   │   ├── include/
+│   │   ├── tests/
+│   │   ├── build/
+│   │   ├── dist/
+│   │   ├── Dockerfile
+│   │   ├── Makefile
+│   │   └── README.md
+│   │
+│   ├── crow-api/                              # Tu servicio actual (API Gateway)
+│   │   ├── .devcontainer/
+│   │   │   ├── devcontainer.json
+│   │   │   └── Dockerfile
+│   │   ├── src/
+│   │   │   ├── main.cpp
+│   │   │   ├── base_model.hpp
+│   │   │   ├── custom_route.hpp
+│   │   │   ├── field_registry.hpp
+│   │   │   ├── field_type.hpp
+│   │   │   └── field_validator.hpp
+│   │   ├── include/
+│   │   ├── tests/
+│   │   ├── build/
+│   │   ├── dist/                              # Imágenes .tar exportadas
+│   │   ├── Dockerfile                         # Producción (Alpine multi-stage)
+│   │   ├── Makefile                           # Con docker-save, docker-export
+│   │   ├── .dockerignore
+│   │   └── README.md
+│   │
+│   └── payment-service/                       # Ejemplo de otro servicio
+│       ├── .devcontainer/
+│       ├── src/
+│       ├── Dockerfile
+│       └── Makefile
+│
+├── shared/                                     # Código compartido entre servicios
+│   ├── models/                                # Modelos comunes
+│   │   ├── base_model.hpp
+│   │   └── user_model.hpp
+│   ├── utils/                                 # Utilidades compartidas
+│   │   ├── logger.hpp
+│   │   └── config.hpp
+│   ├── protos/                                # Definiciones gRPC (si usas gRPC)
+│   │   ├── auth.proto
+│   │   └── user.proto
+│   └── ssl/                                   # Certificados compartidos
+│       ├── server.crt
+│       └── server.key
+│
+├── scripts/                                    # Scripts de automatización
+│   ├── build-all.sh                           # Construir todos los servicios
+│   ├── export-images.sh                       # Exportar todas las imágenes
+│   ├── load-images.sh                         # Cargar imágenes desde dist/
+│   └── cleanup.sh                             # Limpieza general
+│
+├── infrastructure/                             # Infraestructura como código
+│   ├── k8s/                                   # Kubernetes manifests (futuro)
+│   │   ├── auth-service.yaml
+│   │   └── user-service.yaml
+│   ├── terraform/                             # Terraform (futuro)
+│   └── nginx/                                 # Nginx como reverse proxy
+│       └── nginx.conf
+│
+├── docs/                                       # Documentación general
+│   ├── architecture.md                        # Arquitectura del sistema
+│   ├── development.md                         # Guía de desarrollo
+│   ├── deployment.md                          # Guía de despliegue
+│   ├── commands/                              # Comandos útiles
+│   ├── docker/
+│   │   └── analisis-docker.md
+│   ├── grpc/
+│   │   ├── 01-grpc.md
+│   │   └── 02-grpc.md
+│   └── tema1/
+│       ├── 00-rest.txt
+│       ├── 01-introduccion.md
+│       ├── 02-Conceptos-basicos-de-arquitectura.md
+│       ├── 03-diferencias-Soaps-Rest.md
+│       ├── 04-Protocolos-HTTP-HTTPS-WEBSOCKETS.md
+│       ├── 05-Serializacion-json-xml.md
+│       └── 06-oauth.md
+│
+└── .github/                                    # CI/CD (futuro)
+    └── workflows/
+        ├── auth-service.yml
+        ├── user-service.yml
+        └── crow-api.yml
+
+
+# ============================================
+# ESTRUCTURA DE CADA SERVICIO (Ejemplo crow-api)
+# ============================================
+
+services/crow-api/
+├── .devcontainer/
+│   ├── devcontainer.json              # Configuración VSCode
+│   │   {
+│   │     "name": "Crow API DevContainer",
+│   │     "dockerFile": "Dockerfile",
+│   │     "features": {
+│   │       "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+│   │     },
+│   │     "mounts": [
+│   │       "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+│   │     ]
+│   │   }
+│   └── Dockerfile                     # Imagen de DESARROLLO
+│       FROM gcc:13
+│       RUN apt-get update && apt-get install -y \
+│           cmake make gdb valgrind ...
+│
+├── src/
+│   ├── main.cpp
+│   ├── base_model.hpp
+│   ├── custom_route.hpp
+│   ├── field_registry.hpp
+│   ├── field_type.hpp
+│   └── field_validator.hpp
+│
+├── include/                           # Headers públicos
+│
+├── tests/                             # Tests unitarios
+│   ├── test_models.cpp
+│   └── test_routes.cpp
+│
+├── build/                             # Compilación (gitignored)
+│   ├── api                            # Binario de desarrollo
+│   └── production/
+│       └── api                        # Binario optimizado
+│
+├── dist/                              # Imágenes exportadas (gitignored)
+│   ├── crow-api-v1.0.tar
+│   └── crow-api-latest.tar
+│
+├── Dockerfile                         # Imagen de PRODUCCIÓN
+│   # Multi-stage build Alpine (86 MB)
+│
+├── Makefile                           # Comandos del servicio
+│   # Targets principales:
+│   # - dev, production, clean
+│   # - docker-build, docker-test
+│   # - docker-save, docker-export, docker-load
+│   # - test, run, debug
+│
+├── .dockerignore
+│   build/
+│   dist/
+│   .devcontainer/
+│   tests/
+│   docs/
+│
+└── README.md                          # Documentación del servicio
+
+
+# ============================================
+# ARCHIVOS CLAVE EN LA RAÍZ
+# ============================================
+
+Makefile (raíz):
+    # Comandos para gestionar TODOS los servicios desde el host
+    service-build:     Construir un servicio específico
+    service-export:    Exportar imagen de un servicio
+    services-start:    Levantar todos con docker-compose
+    services-stop:     Detener todos
+    services-logs:     Ver logs de todos
+    services-clean:    Limpiar todo
+
+docker-compose.yml (raíz):
+    # Orquestación de TODOS los servicios
+    services:
+      auth-service:
+        image: auth-service:latest
+        ports: ["8081:8080"]
+      user-service:
+        image: user-service:latest
+        ports: ["8082:8080"]
+      crow-api:
+        image: crow-api:latest
+        ports: ["8080:8080"]
+      nginx:
+        image: nginx:alpine
+        ports: ["80:80"]
+
+.gitignore (raíz):
+    **/build/
+    **/dist/
+    **/.vscode/
+    **/node_modules/
+    **/__pycache__/
+
+
+# ============================================
+# FLUJO DE TRABAJO
+# ============================================
+
+1. Developer trabaja en UN SOLO servicio:
+   $ code services/crow-api/           # Abre SOLO este devcontainer
+   
+2. Dentro del devcontainer:
+   $ make dev                          # Compilar en desarrollo
+   $ make test                         # Ejecutar tests
+   $ make production                   # Compilar optimizado
+   $ make docker-build                 # Construir imagen producción
+   $ make docker-save                  # Exportar a dist/crow-api.tar
+   
+3. En el HOST (fuera del devcontainer):
+   $ cd monorepo/
+   $ make service-load SERVICE=crow-api   # Cargar imagen desde dist/
+   $ docker-compose up -d                 # Levantar todos los servicios
+   $ make services-logs                   # Ver logs integrados

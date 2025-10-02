@@ -6,6 +6,11 @@
     "features": {
         "ghcr.io/devcontainers/features/git:1": {},
         "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "enableNonRootDocker": "true",
+            "moby": "true"
+        },
         "ghcr.io/devcontainers/features/common-utils:2": {
             "installZsh": true,
             "configureZshAsDefaultShell": true,
@@ -33,20 +38,15 @@
                 "twxs.cmake",
                 "ms-vscode.cpptools-themes",
                 "vadimcn.vscode-lldb",
-                "formulahendry.code-runner"
+                "formulahendry.code-runner",
+                "ms-azuretools.vscode-docker"
             ]
         }
     },
 
-    // Sin postCreateCommand - las herramientas ya están en la imagen base
-    // "postCreateCommand": "",
-
-    // Puerto forwarding (si necesitas servidor web, etc.)
-    //"forwardPorts": [3000, 8080],
-
     // Comando después de adjuntar al contenedor
     "postAttachCommand": {
-        "info": "echo '✅ C++ Dev Container listo para usar!'"
+        "info": "echo '✅ C++ Dev Container listo para usar!' && docker --version"
     },
 
     // Configuración del usuario dentro del container
@@ -61,12 +61,10 @@
         "TZ": "Europe/Madrid"
     },
 
-    // Montajes adicionales si necesitas acceso a directorios específicos
-    "mounts": [
-        // "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-    ],
+    // Sin mounts adicionales (Docker-in-Docker no los necesita)
+    "mounts": [],
 
-    // Configuración de privilegios
-    "privileged": false,
+    // Configuración de privilegios (necesario para Docker-in-Docker)
+    "privileged": true,
     "init": true
 }
