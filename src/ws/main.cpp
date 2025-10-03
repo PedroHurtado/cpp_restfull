@@ -19,7 +19,7 @@ int main() {
     });
 
     // Endpoint WebSocket
-    CROW_ROUTE(app, "/ws")
+    CROW_ROUTE(app, "/ws")       
       .websocket(&app)
       .onopen([&](crow::websocket::connection& conn){
           std::lock_guard<std::mutex> lock(mtx);

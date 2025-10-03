@@ -20,7 +20,7 @@
     <button id="sendBtn">Enviar</button>
 
     <script>
-        const ws = new WebSocket('ws://localhost:8080/ws');
+        const ws = new WebSocket('ws://localhost:8080/ws');        
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const statusDiv = document.getElementById('status');
@@ -31,6 +31,7 @@
         };
 
         ws.onmessage = (event) => {
+            //recibe los mensajes
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message';
             msgDiv.textContent = event.data;
@@ -51,7 +52,7 @@
         function sendMessage() {
             const msg = messageInput.value.trim();
             if (msg && ws.readyState === WebSocket.OPEN) {
-                ws.send(msg);
+                ws.send(msg); //envio de mensajes del cliente al servidor
                 messageInput.value = '';
             }
         }
