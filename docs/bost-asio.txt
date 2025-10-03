@@ -1,0 +1,44 @@
+#include <iostream>
+#include <boost/asio.hpp>
+#include <thread>
+#include <chrono>
+
+void print_thread_id(const std::string& msg) {
+    std::cout << msg << " - Thread ID: " 
+              << std::this_thread::get_id() << std::endl;
+}
+
+int main() {
+    boost::asio::io_context io;
+    
+    print_thread_id("MAIN thread");
+    
+    // POST: encola la tarea
+    boost::asio::post(io, []() {
+        print_thread_id("  Tarea 1 ejecutándose");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    });
+    
+    boost::asio::post(io, []() {
+        print_thread_id("  Tarea 2 ejecutándose");
+    });
+    
+    boost::asio::post(io, []() {
+        print_thread_id("  Tarea 3 ejecutándose");
+    });
+    
+    std::cout << "Tareas encoladas (aún no se ejecutan)" << std::endl;
+    
+    // Ahora creamos un thread que ejecuta el io_context
+    std::thread io_thread([&io]() {
+        print_thread_id("IO_CONTEXT thread iniciado");
+        io.run();  // Aquí se ejecutan todas las tareas encoladas
+        print_thread_id("IO_CONTEXT thread terminado");
+    });
+    
+    print_thread_id("MAIN thread continúa mientras io_context trabaja");
+    
+    io_thread.join();
+    
+    return 0;
+}
