@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+        #messageInput { width: 80%; padding: 8px; }
+        #sendBtn { padding: 8px 20px; }
+        .message { margin: 5px 0; padding: 5px; background: #f0f0f0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Demo</h1>
+    <div id="status">Conectando...</div>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Escribe un mensaje...">
+    <button id="sendBtn">Enviar</button>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8080/ws');
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const statusDiv = document.getElementById('status');
+
+        ws.onopen = () => {
+            statusDiv.textContent = '✓ Conectado';
+            statusDiv.style.color = 'green';
+        };
+
+        ws.onmessage = (event) => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+            msgDiv.textContent = event.data;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        ws.onerror = () => {
+            statusDiv.textContent = '✗ Error de conexión';
+            statusDiv.style.color = 'red';
+        };
+
+        ws.onclose = () => {
+            statusDiv.textContent = '✗ Desconectado';
+            statusDiv.style.color = 'orange';
+        };
+
+        function sendMessage() {
+            const msg = messageInput.value.trim();
+            if (msg && ws.readyState === WebSocket.OPEN) {
+                ws.send(msg);
+                messageInput.value = '';
+            }
+        }
+
+        document.getElementById('sendBtn').onclick = sendMessage;
+        messageInput.onkeypress = (e) => {
+            if (e.key === 'Enter') sendMessage();
+        };
+    </script>
+</body>
+</html>
