@@ -35,6 +35,7 @@ public:
     }
 
     void add_client(crow::response* res) {
+        
         std::lock_guard<std::mutex> lock(clients_mutex);
         clients.push_back(res);
     }
@@ -236,7 +237,7 @@ int main() {
         res.write("event: message\ndata: Conectado al servidor SSE\n\n");
         
         // Mantener la conexión abierta
-        res.end();
+        //res.end();
     });
 
     // Endpoint para disparar eventos personalizados
@@ -249,7 +250,7 @@ int main() {
     std::cout << "Servidor SSE iniciado en http://localhost:18080\n";
     std::cout << "Abre tu navegador y visita la URL\n";
     
-    app.port(18080).multithreaded().run();
+    app.port(8080).multithreaded().run();
     
     return 0;
 }
