@@ -1,0 +1,257 @@
+# ========================================
+# NAMESPACE
+# ========================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-app
+
+---
+# ========================================
+# SERVICIO 1: API Backend (Node.js simulado)
+# ========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend
+  namespace: demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-backend
+  template:
+    metadata:
+      labels:
+        app: api-backend
+    spec:
+      containers:
+      - name: api
+        image: hashicorp/http-echo
+        args:
+          - "-text=¡Hola desde el Backend API! 🚀"
+          - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-backend-service
+  namespace: demo-app
+spec:
+  selector:
+    app: api-backend
+  ports:
+  - port: 80
+    targetPort: 8080
+
+---
+# ========================================
+# SERVICIO 2: Frontend (Nginx)
+# ========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: demo-app
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Demo Frontend</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container {
+                background: rgba(255,255,255,0.1);
+                padding: 30px;
+                border-radius: 10px;
+                backdrop-filter: blur(10px);
+            }
+            button {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                font-size: 16px;
+                cursor: pointer;
+                border-radius: 5px;
+                margin-top: 20px;
+            }
+            button:hover { background: #45a049; }
+            #response {
+                margin-top: 20px;
+                padding: 15px;
+                background: rgba(0,0,0,0.2);
+                border-radius: 5px;
+                min-height: 50px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎯 Frontend Demo</h1>
+            <p>Este es el servicio frontend servido por Nginx</p>
+            <button onclick="callBackend()">Llamar al Backend API</button>
+            <div id="response"></div>
+        </div>
+        <script>
+            async function callBackend() {
+                try {
+                    const response = await fetch('/api/');
+                    const text = await response.text();
+                    document.getElementById('response').innerHTML = 
+                        '<strong>Respuesta del API:</strong><br>' + text;
+                } catch(error) {
+                    document.getElementById('response').innerHTML = 
+                        '<strong>Error:</strong> ' + error.message;
+                }
+            }
+        </script>
+    </body>
+    </html>
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: frontend-html
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: demo-app
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+# ========================================
+# TRAEFIK API GATEWAY
+# ========================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ingress-controller
+  namespace: demo-app
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      containers:
+      - name: traefik
+        image: traefik:v2.10
+        args:
+          - --api.insecure=true
+          - --providers.kubernetesingress
+          - --entrypoints.web.address=:80
+          - --entrypoints.websecure.address=:443
+        ports:
+        - name: web
+          containerPort: 80
+        - name: websecure
+          containerPort: 443
+        - name: admin
+          containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: demo-app
+spec:
+  type: LoadBalancer
+  selector:
+    app: traefik
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80
+  - name: admin
+    port: 8080
+    targetPort: 8080
+
+---
+# ========================================
+# INGRESS RULES
+# ========================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: demo-app
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-backend-service
+            port:
+              number: 80
