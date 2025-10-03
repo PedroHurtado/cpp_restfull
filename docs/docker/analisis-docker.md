@@ -536,50 +536,7 @@ proyecto/
 
 ---
 
-## 🔧 Troubleshooting
 
-### Problema: "docker: command not found"
-```bash
-# Solución: Rebuild devcontainer con feature docker-in-docker
-# Ctrl+Shift+P → "Rebuild Container"
-```
-
-### Problema: "Cannot connect to Docker daemon"
-```bash
-# Verificar servicio
-sudo systemctl status docker
-sudo systemctl start docker
-
-# Añadir usuario al grupo
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-### Problema: "unable to delete image - in use by container"
-```bash
-# Ver contenedores detenidos
-docker ps -a
-
-# Eliminar contenedor primero
-docker rm <CONTAINER_ID>
-
-# Luego eliminar imagen
-docker rmi <IMAGE_ID>
-
-# O todo junto
-docker rm <CONTAINER_ID> && docker rmi <IMAGE_ID>
-```
-
-### Problema: "Dockerfile: no such file or directory"
-```bash
-# Verificar nombre correcto (con 'f' minúscula)
-ls -la | grep -i dockerfile
-
-# Renombrar si es necesario
-mv DockerFile Dockerfile
-```
-
----
 
 ## ✅ Checklist Final
 
@@ -593,16 +550,4 @@ mv DockerFile Dockerfile
 - [x] Dependencias mínimas (solo libc)
 - [x] Imagen lista para producción
 
----
-
-## 🎯 Próximos Pasos Sugeridos
-
-1. **Docker Compose** para desarrollo local con múltiples servicios
-2. **GitHub Actions** para CI/CD automático
-3. **Deployment** a cloud (AWS ECS, Google Cloud Run, etc.)
-4. **Monitoring** con Prometheus/Grafana
-5. **Logging** estructurado
-6. **Tests** automatizados
-
----
 
